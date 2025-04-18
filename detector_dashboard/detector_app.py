@@ -119,6 +119,31 @@ try:
                 with st.expander("🔍 View Full Attack Details"):
                     st.dataframe(df, use_container_width=True)
 
+                # Clear attack payload after detection
+                def clear_github_payload():
+                    headers = {
+                        "Authorization": f"token {st.secrets['GITHUB_TOKEN']}",
+                        "Accept": "application/vnd.github.v3+json"
+                    }
+                    get_resp = requests.get(CSV_URL.replace("raw.githubusercontent.com", "api.github.com/repos").replace("/main/", "/contents/"), headers=headers)
+                    if get_resp.status_code == 200:
+                        sha = get_resp.json()["sha"]
+                        payload = {
+                            "message": "🧹 Clear processed attack payload",
+                            "content": "",
+                            "sha": sha,
+                            "branch": "main"
+                        }
+                        response = requests.put(CSV_URL.replace("raw.githubusercontent.com", "api.github.com/repos").replace("/main/", "/contents/"), json=payload, headers=headers)
+                        return response.status_code in [200, 201]
+                    return False
+
+                clear_status = clear_github_payload()
+                if clear_status:
+                    st.success("🧹 Cleared attack payload after detection.")
+                else:
+                    st.warning("⚠️ Failed to clear attack payload.")
+
     else:
         st.warning(f"⚠️ Could not fetch file from GitHub (Status {response.status_code})")
 
