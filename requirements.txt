@@ -6,4 +6,5 @@ plotly
 requests
 scikit-learn
 streamlit-autorefresh
+firebase-admin
 

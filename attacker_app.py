@@ -1,24 +1,24 @@
+# attacker_app.py
 import streamlit as st
 import pandas as pd
 import random
-import requests
-import base64
-import time
+import firebase_admin
+from firebase_admin import credentials, db
 
-# GitHub settings (use Streamlit secrets for security)
-GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
-REPO_OWNER = "Pushkarani-Pujari"
-REPO_NAME = "ids-detector"
-FILE_PATH_IN_REPO = "detector_dashboard/attack_payload.csv"
-GITHUB_API_URL = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/{FILE_PATH_IN_REPO}"
+# Firebase setup
+if not firebase_admin._apps:
+    cred = credentials.Certificate(st.secrets["firebase_key"])
+    firebase_admin.initialize_app(cred, {
+        "databaseURL": st.secrets["firebase_url"]
+    })
 
-# Page setup
+# Streamlit UI
 st.set_page_config(layout="wide", page_title="Attacker Dashboard", page_icon="💣")
 st.title("💣 Attacker")
 st.markdown("---")
 st.markdown("Upload your attack dataset")
 
-# Upload CSV/JSON
+# Upload data
 uploaded_file = st.file_uploader("📤 Upload your attack payload (.csv or .json)", type=["csv", "json"])
 df_uploaded = None
 
@@ -32,37 +32,14 @@ if uploaded_file:
     except Exception as e:
         st.error(f"❌ Failed to load file: {e}")
 
-def push_to_github(file_content: str, commit_msg="Update attack payload"):
-    headers = {
-        "Authorization": f"token {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github.v3+json"
-    }
+# Send row to Firebase
+def push_to_firebase(row_dict):
+    ref = db.reference("attack_payload")
+    ref.set(row_dict)
 
-    # Get SHA if file already exists
-    get_resp = requests.get(GITHUB_API_URL, headers=headers)
-    sha = get_resp.json().get("sha") if get_resp.status_code == 200 else None
-
-    encoded_content = base64.b64encode(file_content.encode()).decode()
-
-    data = {
-        "message": commit_msg,
-        "content": encoded_content,
-        "branch": "main"
-    }
-    if sha:
-        data["sha"] = sha
-
-    response = requests.put(GITHUB_API_URL, json=data, headers=headers)
-    return response.status_code in [200, 201]
-
-# Launch one random row
 if df_uploaded is not None:
     if st.button("🚀 Launch Attack"):
         row = df_uploaded.sample(1).reset_index(drop=True)
-        csv_str = row.to_csv(index=False)
-        success = push_to_github(csv_str, "🚨 Launch ")
-
-        if success:
-            st.success("🎯 Attack  launched ")
-        else:
-            st.error("❌ Failed to push attack to GitHub.")
+        row_dict = row.to_dict(orient="records")[0]
+        push_to_firebase(row_dict)
+        st.success("🎯 Attack pushed to Firebase")
