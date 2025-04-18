@@ -68,7 +68,8 @@ try:
     response = requests.get(CSV_URL_RAW)
     if response.status_code == 200:
         if not response.text.strip():
-            st.info("📭 No new attack")
+            with st.spinner("⏳ Waiting for attack..."):
+                st.info("📭 No new attack launched yet")
         else:
             df = pd.read_csv(StringIO(response.text))
             df = df.iloc[[0]]  # Only process first row
@@ -127,7 +128,16 @@ try:
             with st.expander("🔍 Full Attack Details"):
                 st.dataframe(df)
 
-            
+            # Clear the file to simulate one-by-one real-time detection
+            cleared = clear_github_file()
+            if cleared:
+                st.success("🧹 Cleared detected attack from payload")
+            else:
+                st.warning("⚠️ Failed to clear GitHub file after detection")
+
+            # Optional: Give GitHub a moment to sync
+            time.sleep(1)
+
     else:
         st.warning(f"⚠️ GitHub returned {response.status_code} when fetching file.")
 
