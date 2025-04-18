@@ -7,6 +7,7 @@ from datetime import datetime
 import plotly.graph_objects as go
 import requests
 from io import StringIO
+from streamlit_autorefresh import st_autorefresh
 
 # Public URL to fetch the attack payload
 CSV_URL = "https://raw.githubusercontent.com/Pushkarani-Pujari/ids-detector/main/detector_dashboard/attack_payload.csv"
@@ -40,8 +41,12 @@ def label_attack_type(label):
 
 # Sidebar refresh control
 refresh_interval_ms = st.sidebar.slider("🔄 Refresh interval (ms)", 500, 5000, 1000, step=100)
-st.sidebar.info("The dashboard will auto-refresh based on this interval.")
+st.sidebar.info("The dashboard auto-refreshes using `st_autorefresh`.")
 
+# Auto-refresh the page
+st_autorefresh(interval=refresh_interval_ms, key="auto_refresh")
+
+# Fetch and process attack data
 try:
     response = requests.get(CSV_URL)
     if response.status_code == 200:
@@ -119,7 +124,3 @@ try:
 
 except Exception as e:
     st.error(f"❌ Error fetching or processing data: {e}")
-
-# Auto-refresh
-time.sleep(refresh_interval_ms / 1000)
-st.experimental_rerun()
