@@ -5,4 +5,5 @@ joblib
 plotly
 requests
 scikit-learn
+streamlit-autorefresh
 
